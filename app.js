@@ -60,7 +60,7 @@ const elements = {
   unlockTitle: document.querySelector("#unlockTitle"),
   unlockText: document.querySelector("#unlockText"),
   unlockFill: document.querySelector("#unlockFill"),
-  forecast: document.querySelector("#forecastGrid"),
+  historyGrid: document.querySelector("#forecastGrid"),
   trendChart: document.querySelector("#trendChart"),
   pressureSystems: document.querySelector("#pressureSystems"),
   history: document.querySelector("#historyList"),
@@ -244,14 +244,15 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function forecastFor(result) {
+function signalHistoryFor(result) {
   const seed = seedFor(result.company);
   return Array.from({ length: 7 }, function makeDay(_, index) {
+    const daysAgo = 6 - index;
     const wave = Math.sin((seed + index * 19) / 13) * 11;
-    const relief = index > 3 ? -7 : 0;
-    const score = clamp(result.average + wave + relief, 4, 96);
+    const drift = (index - 3) * 1.8;
+    const score = clamp(result.average + wave + drift, 4, 96);
     const mood = score < 22 ? "great" : score < 48 ? "okay" : score < 74 ? "stressed" : "burned_out";
-    const date = new Date(Date.now() + index * 86400000);
+    const date = new Date(Date.now() - daysAgo * 86400000);
     return {
       day: date.toLocaleDateString([], { weekday: "short" }),
       score: score,
@@ -303,7 +304,7 @@ function renderWeather(company) {
       }).join("")
     : "<span class=\"reason-pill\">no signals yet</span>";
   renderUnlock(result);
-  renderForecast(result);
+  renderSignalHistory(result);
   renderTrend(result);
   return result;
 }
@@ -322,17 +323,17 @@ function renderUnlock(result) {
   }
 }
 
-function renderForecast(result) {
-  const forecast = forecastFor(result);
-  elements.forecast.innerHTML = forecast.map(function dayCard(day) {
+function renderSignalHistory(result) {
+  const history = signalHistoryFor(result);
+  elements.historyGrid.innerHTML = history.map(function dayCard(day) {
     const config = moodConfig[day.mood];
     return "<article class=\"forecast-day\"><strong>" + escapeHtml(day.day) + "</strong><span>" + escapeHtml(config.icon) + "</span><small>" + escapeHtml(config.label) + "</small><small>" + Math.round(day.score) + "% burnout</small></article>";
   }).join("");
 }
 
 function renderTrend(result) {
-  const forecast = forecastFor(result);
-  const points = forecast.map(function pointFor(day, index) {
+  const history = signalHistoryFor(result);
+  const points = history.map(function pointFor(day, index) {
     const x = 42 + index * 92;
     const y = 188 - (day.score / 100) * 150;
     return { x: x, y: y, score: day.score };
@@ -351,7 +352,7 @@ function renderTrend(result) {
     "<polyline points=\"" + polyline + "\" fill=\"none\" stroke=\"#2f6f73\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />",
     circles,
     "<text x=\"42\" y=\"24\" font-size=\"16\" font-weight=\"800\" fill=\"#5f6673\">storm risk</text>",
-    "<text x=\"42\" y=\"214\" font-size=\"16\" font-weight=\"800\" fill=\"#5f6673\">next 7 days</text>"
+    "<text x=\"42\" y=\"214\" font-size=\"16\" font-weight=\"800\" fill=\"#5f6673\">past 7 days</text>"
   ].join("");
 
   elements.pressureSystems.innerHTML = pressureFor(result).map(function pressureRow(item) {

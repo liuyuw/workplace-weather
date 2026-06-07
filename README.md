@@ -10,7 +10,7 @@ This is not positioned as an HR surveillance tool. It is an employee-first emoti
 
 - quick daily check-in
 - anonymous company-level mood aggregation
-- burnout / dread / morale weather
+- burnout / dread / morale weather and historical signal trends
 - shareable result cards
 - no comments or free-text workplace stories
 
