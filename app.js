@@ -57,6 +57,12 @@ const elements = {
   dreadIndex: document.querySelector("#dreadIndex"),
   trendLabel: document.querySelector("#trendLabel"),
   reasonBar: document.querySelector("#reasonBar"),
+  unlockTitle: document.querySelector("#unlockTitle"),
+  unlockText: document.querySelector("#unlockText"),
+  unlockFill: document.querySelector("#unlockFill"),
+  forecast: document.querySelector("#forecastGrid"),
+  trendChart: document.querySelector("#trendChart"),
+  pressureSystems: document.querySelector("#pressureSystems"),
   history: document.querySelector("#historyList"),
   download: document.querySelector("#downloadBtn"),
   copy: document.querySelector("#copyBtn"),
@@ -228,6 +234,45 @@ function aggregate(company) {
   };
 }
 
+function seedFor(value) {
+  return value.split("").reduce(function sumChars(sum, char) {
+    return sum + char.charCodeAt(0);
+  }, 0);
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function forecastFor(result) {
+  const seed = seedFor(result.company);
+  return Array.from({ length: 7 }, function makeDay(_, index) {
+    const wave = Math.sin((seed + index * 19) / 13) * 11;
+    const relief = index > 3 ? -7 : 0;
+    const score = clamp(result.average + wave + relief, 4, 96);
+    const mood = score < 22 ? "great" : score < 48 ? "okay" : score < 74 ? "stressed" : "burned_out";
+    const date = new Date(Date.now() + index * 86400000);
+    return {
+      day: date.toLocaleDateString([], { weekday: "short" }),
+      score: score,
+      mood: mood
+    };
+  });
+}
+
+function pressureFor(result) {
+  const counts = result.reasons.length ? result.reasons : [["meetings", 8], ["workload", 7], ["unclear priorities", 5]];
+  const max = counts.reduce(function maxCount(current, entry) {
+    return Math.max(current, entry[1]);
+  }, 1);
+  return counts.map(function makePressure(entry) {
+    return {
+      name: entry[0],
+      value: Math.round((entry[1] / max) * 100)
+    };
+  });
+}
+
 function trendFor(average) {
   if (average < 32) return "improving";
   if (average < 58) return "mixed";
@@ -257,7 +302,61 @@ function renderWeather(company) {
         return "<span class=\"reason-pill\">" + escapeHtml(entry[0]) + " · " + entry[1] + "</span>";
       }).join("")
     : "<span class=\"reason-pill\">no signals yet</span>";
+  renderUnlock(result);
+  renderForecast(result);
+  renderTrend(result);
   return result;
+}
+
+function renderUnlock(result) {
+  const threshold = 50;
+  const progress = Math.min(result.count, threshold);
+  const remaining = Math.max(threshold - result.count, 0);
+  elements.unlockFill.style.width = Math.round((progress / threshold) * 100) + "%";
+  if (remaining) {
+    elements.unlockTitle.textContent = remaining + " more signals to unlock public weather";
+    elements.unlockText.textContent = result.company + " has " + result.count + " anonymous signals in this prototype. Real public dashboards should stay limited until the privacy threshold is met.";
+  } else {
+    elements.unlockTitle.textContent = "Public weather unlocked";
+    elements.unlockText.textContent = result.company + " has enough anonymous signals for aggregate-only weather. Trends remain self-reported, not official company data.";
+  }
+}
+
+function renderForecast(result) {
+  const forecast = forecastFor(result);
+  elements.forecast.innerHTML = forecast.map(function dayCard(day) {
+    const config = moodConfig[day.mood];
+    return "<article class=\"forecast-day\"><strong>" + escapeHtml(day.day) + "</strong><span>" + escapeHtml(config.icon) + "</span><small>" + escapeHtml(config.label) + "</small><small>" + Math.round(day.score) + "% burnout</small></article>";
+  }).join("");
+}
+
+function renderTrend(result) {
+  const forecast = forecastFor(result);
+  const points = forecast.map(function pointFor(day, index) {
+    const x = 42 + index * 92;
+    const y = 188 - (day.score / 100) * 150;
+    return { x: x, y: y, score: day.score };
+  });
+  const polyline = points.map(function pointText(point) {
+    return point.x + "," + point.y;
+  }).join(" ");
+  const circles = points.map(function circle(point) {
+    return "<circle cx=\"" + point.x + "\" cy=\"" + point.y + "\" r=\"6\" fill=\"#2f6f73\"><title>" + Math.round(point.score) + "%</title></circle>";
+  }).join("");
+  elements.trendChart.innerHTML = [
+    "<line x1=\"42\" y1=\"38\" x2=\"42\" y2=\"188\" stroke=\"#c7d0dc\" />",
+    "<line x1=\"42\" y1=\"188\" x2=\"600\" y2=\"188\" stroke=\"#c7d0dc\" />",
+    "<line x1=\"42\" y1=\"83\" x2=\"600\" y2=\"83\" stroke=\"#edf0f4\" />",
+    "<line x1=\"42\" y1=\"128\" x2=\"600\" y2=\"128\" stroke=\"#edf0f4\" />",
+    "<polyline points=\"" + polyline + "\" fill=\"none\" stroke=\"#2f6f73\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />",
+    circles,
+    "<text x=\"42\" y=\"24\" font-size=\"16\" font-weight=\"800\" fill=\"#5f6673\">storm risk</text>",
+    "<text x=\"42\" y=\"214\" font-size=\"16\" font-weight=\"800\" fill=\"#5f6673\">next 7 days</text>"
+  ].join("");
+
+  elements.pressureSystems.innerHTML = pressureFor(result).map(function pressureRow(item) {
+    return "<div class=\"pressure-system\"><span>" + escapeHtml(item.name) + "</span><div class=\"pressure-track\"><span style=\"width: " + item.value + "%\"></span></div><strong>" + item.value + "%</strong></div>";
+  }).join("");
 }
 
 function renderHistory() {

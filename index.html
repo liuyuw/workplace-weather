@@ -124,6 +124,34 @@
             <div class="reason-bar" id="reasonBar"></div>
           </div>
 
+          <div class="unlock-panel" id="unlockPanel">
+            <div>
+              <p class="eyebrow">Public Weather Unlock</p>
+              <h2 id="unlockTitle">Collecting anonymous signals</h2>
+              <p id="unlockText">Company weather unlocks after enough anonymous check-ins.</p>
+            </div>
+            <div class="unlock-meter" aria-label="Unlock progress">
+              <div id="unlockFill"></div>
+            </div>
+          </div>
+
+          <div class="forecast-panel">
+            <div class="section-heading compact">
+              <p class="eyebrow">7-Day Forecast</p>
+              <h2>Workplace outlook</h2>
+            </div>
+            <div id="forecastGrid" class="forecast-grid"></div>
+          </div>
+
+          <div class="trend-panel">
+            <div class="section-heading compact">
+              <p class="eyebrow">Burnout Chance</p>
+              <h2>Trend radar</h2>
+            </div>
+            <svg id="trendChart" class="trend-chart" viewBox="0 0 640 220" role="img" aria-label="Burnout chance trend"></svg>
+            <div id="pressureSystems" class="pressure-systems"></div>
+          </div>
+
           <div class="share-actions">
             <button id="downloadBtn" class="secondary-btn" type="button">Download share card</button>
             <button id="copyBtn" class="ghost-btn" type="button">Copy caption</button>

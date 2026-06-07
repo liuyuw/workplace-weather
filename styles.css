@@ -401,6 +401,105 @@ button {
   margin: 14px 0 20px;
 }
 
+.unlock-panel,
+.forecast-panel,
+.trend-panel {
+  border: 1px solid var(--line);
+  padding: 16px;
+  background: var(--paper);
+  margin-top: 14px;
+}
+
+.unlock-panel h2,
+.forecast-panel h2,
+.trend-panel h2 {
+  font-size: 20px;
+}
+
+.unlock-panel p {
+  margin-bottom: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.unlock-meter {
+  height: 14px;
+  border: 1px solid #bfc8d4;
+  background: white;
+  overflow: hidden;
+}
+
+.unlock-meter div {
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--sun));
+  transition: width 180ms ease;
+}
+
+.forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.forecast-day {
+  display: grid;
+  gap: 7px;
+  min-height: 112px;
+  border: 1px solid var(--line);
+  padding: 10px;
+  background: white;
+}
+
+.forecast-day strong {
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.forecast-day span {
+  font-size: 22px;
+  font-weight: 950;
+}
+
+.forecast-day small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.trend-chart {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  background: white;
+}
+
+.pressure-systems {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pressure-system {
+  display: grid;
+  grid-template-columns: 120px 1fr 44px;
+  gap: 10px;
+  align-items: center;
+  color: #313946;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.pressure-track {
+  height: 9px;
+  background: #e2e7ed;
+}
+
+.pressure-track span {
+  display: block;
+  height: 100%;
+  background: var(--cloud);
+}
+
 .history-panel {
   border-top: 1px solid var(--line);
   padding-top: 18px;
@@ -453,7 +552,12 @@ button {
   .mood-grid,
   .reason-grid,
   .field-row,
-  .metric-grid {
+  .metric-grid,
+  .forecast-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pressure-system {
     grid-template-columns: 1fr;
   }
 
