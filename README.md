@@ -23,10 +23,13 @@ This is not positioned as an HR surveillance tool. It is an employee-first emoti
 - Company name, mood, reason, and shift timing are stored in localStorage.
 - Public results are mocked locally and should not be treated as real company data.
 - No free-text comments. The product should collect structured mood signals only.
+- Public company weather unlocks only after an aggregate response threshold.
+- Historical modules have a higher threshold, and each day in the past 7 days must meet its own daily threshold.
 
 ## Core Safety Rules
 
 - Never show company-level results below a minimum response threshold in a real backend.
+- Do not interpolate or guess missing historical days. If a day has too few signals, show "Not enough signals" and break the trend line.
 - Never expose department, location, title, or small cohort data without privacy thresholds.
 - Use language like self-reported sentiment, not objective claims about a company.
 - Do not collect real names in the early product.

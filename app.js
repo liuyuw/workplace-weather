@@ -1,5 +1,9 @@
 const storageKey = "workplaceWeather:checkins";
 const customCompaniesKey = "workplaceWeather:customCompanies";
+const publicWeatherThreshold = 50;
+const historyModuleThreshold = 100;
+const dailySignalThreshold = 20;
+const minimumTrendDays = 3;
 
 const seedCompanies = [
   { id: "google", name: "Google", aliases: ["Alphabet", "Google LLC", "Google Cloud"], industry: "Tech", status: "seeded" },
@@ -252,11 +256,14 @@ function signalHistoryFor(result) {
     const drift = (index - 3) * 1.8;
     const score = clamp(result.average + wave + drift, 4, 96);
     const mood = score < 22 ? "great" : score < 48 ? "okay" : score < 74 ? "stressed" : "burned_out";
+    const syntheticCount = Math.max(0, Math.round((result.count / 7) + ((seed + index * 11) % 14) - 5));
     const date = new Date(Date.now() - daysAgo * 86400000);
     return {
       day: date.toLocaleDateString([], { weekday: "short" }),
       score: score,
-      mood: mood
+      mood: mood,
+      count: syntheticCount,
+      meetsThreshold: syntheticCount >= dailySignalThreshold
     };
   });
 }
@@ -310,49 +317,87 @@ function renderWeather(company) {
 }
 
 function renderUnlock(result) {
-  const threshold = 50;
+  const threshold = publicWeatherThreshold;
   const progress = Math.min(result.count, threshold);
   const remaining = Math.max(threshold - result.count, 0);
   elements.unlockFill.style.width = Math.round((progress / threshold) * 100) + "%";
   if (remaining) {
     elements.unlockTitle.textContent = remaining + " more signals to unlock public weather";
-    elements.unlockText.textContent = result.company + " has " + result.count + " anonymous signals in this prototype. Real public dashboards should stay limited until the privacy threshold is met.";
+    elements.unlockText.textContent = result.company + " has " + result.count + " anonymous signals. Public company weather stays limited until " + threshold + "+ aggregate signals.";
   } else {
     elements.unlockTitle.textContent = "Public weather unlocked";
-    elements.unlockText.textContent = result.company + " has enough anonymous signals for aggregate-only weather. Trends remain self-reported, not official company data.";
+    const historyRemaining = Math.max(historyModuleThreshold - result.count, 0);
+    elements.unlockText.textContent = historyRemaining
+      ? "Today's aggregate weather can be shown. Historical trend unlocks after " + historyRemaining + " more signals and still hides low-sample days."
+      : "Today's aggregate weather and history modules are unlocked. Low-sample days still stay hidden.";
   }
 }
 
 function renderSignalHistory(result) {
   const history = signalHistoryFor(result);
+  if (result.count < historyModuleThreshold) {
+    elements.historyGrid.innerHTML = "<article class=\"locked-panel full-span\"><strong>History locked</strong><span>Past 7 Days unlocks at " + historyModuleThreshold + "+ anonymous signals. Until then, we avoid turning tiny samples into fake weather.</span></article>";
+    return;
+  }
   elements.historyGrid.innerHTML = history.map(function dayCard(day) {
+    if (!day.meetsThreshold) {
+      return "<article class=\"forecast-day locked-day\"><strong>" + escapeHtml(day.day) + "</strong><span>--</span><small>Not enough signals</small><small>" + day.count + " / " + dailySignalThreshold + " minimum</small></article>";
+    }
     const config = moodConfig[day.mood];
-    return "<article class=\"forecast-day\"><strong>" + escapeHtml(day.day) + "</strong><span>" + escapeHtml(config.icon) + "</span><small>" + escapeHtml(config.label) + "</small><small>" + Math.round(day.score) + "% burnout</small></article>";
+    return "<article class=\"forecast-day\"><strong>" + escapeHtml(day.day) + "</strong><span>" + escapeHtml(config.icon) + "</span><small>" + escapeHtml(config.label) + "</small><small>" + Math.round(day.score) + "% burnout · " + day.count + " signals</small></article>";
   }).join("");
 }
 
 function renderTrend(result) {
   const history = signalHistoryFor(result);
-  const points = history.map(function pointFor(day, index) {
+  if (result.count < historyModuleThreshold) {
+    elements.trendChart.innerHTML = [
+      "<rect x=\"0\" y=\"0\" width=\"640\" height=\"220\" fill=\"#ffffff\" />",
+      "<text x=\"42\" y=\"92\" font-size=\"24\" font-weight=\"900\" fill=\"#171717\">Historical trend locked</text>",
+      "<text x=\"42\" y=\"128\" font-size=\"16\" font-weight=\"800\" fill=\"#5f6673\">Need " + historyModuleThreshold + "+ aggregate signals before showing history.</text>"
+    ].join("");
+    elements.pressureSystems.innerHTML = "<div class=\"locked-panel\"><strong>Pressure systems locked</strong><span>Reason breakdowns unlock with enough anonymous volume.</span></div>";
+    return;
+  }
+  const validPoints = history.map(function pointFor(day, index) {
     const x = 42 + index * 92;
     const y = 188 - (day.score / 100) * 150;
-    return { x: x, y: y, score: day.score };
+    return day.meetsThreshold ? { x: x, y: y, score: day.score, day: day.day } : null;
   });
-  const polyline = points.map(function pointText(point) {
-    return point.x + "," + point.y;
-  }).join(" ");
-  const circles = points.map(function circle(point) {
-    return "<circle cx=\"" + point.x + "\" cy=\"" + point.y + "\" r=\"6\" fill=\"#2f6f73\"><title>" + Math.round(point.score) + "%</title></circle>";
+  const visiblePoints = validPoints.filter(Boolean);
+  const segments = [];
+  let segment = [];
+  validPoints.forEach(function collectSegments(point) {
+    if (point) {
+      segment.push(point);
+      return;
+    }
+    if (segment.length > 1) segments.push(segment);
+    segment = [];
+  });
+  if (segment.length > 1) segments.push(segment);
+  const polylines = segments.map(function segmentLine(points) {
+    const polyline = points.map(function pointText(point) {
+      return point.x + "," + point.y;
+    }).join(" ");
+    return "<polyline points=\"" + polyline + "\" fill=\"none\" stroke=\"#2f6f73\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />";
   }).join("");
+  const circles = visiblePoints.map(function circle(point) {
+    return "<circle cx=\"" + point.x + "\" cy=\"" + point.y + "\" r=\"6\" fill=\"#2f6f73\"><title>" + point.day + ": " + Math.round(point.score) + "%</title></circle>";
+  }).join("");
+  const emptyMessage = visiblePoints.length < minimumTrendDays
+    ? "<text x=\"42\" y=\"116\" font-size=\"18\" font-weight=\"900\" fill=\"#5f6673\">Not enough thresholded days for a weekly trend.</text>"
+    : "";
   elements.trendChart.innerHTML = [
     "<line x1=\"42\" y1=\"38\" x2=\"42\" y2=\"188\" stroke=\"#c7d0dc\" />",
     "<line x1=\"42\" y1=\"188\" x2=\"600\" y2=\"188\" stroke=\"#c7d0dc\" />",
     "<line x1=\"42\" y1=\"83\" x2=\"600\" y2=\"83\" stroke=\"#edf0f4\" />",
     "<line x1=\"42\" y1=\"128\" x2=\"600\" y2=\"128\" stroke=\"#edf0f4\" />",
-    "<polyline points=\"" + polyline + "\" fill=\"none\" stroke=\"#2f6f73\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />",
+    polylines,
     circles,
+    emptyMessage,
     "<text x=\"42\" y=\"24\" font-size=\"16\" font-weight=\"800\" fill=\"#5f6673\">storm risk</text>",
-    "<text x=\"42\" y=\"214\" font-size=\"16\" font-weight=\"800\" fill=\"#5f6673\">past 7 days</text>"
+    "<text x=\"42\" y=\"214\" font-size=\"16\" font-weight=\"800\" fill=\"#5f6673\">past 7 days · gaps mean low sample</text>"
   ].join("");
 
   elements.pressureSystems.innerHTML = pressureFor(result).map(function pressureRow(item) {
