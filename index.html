@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workplace Weather</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="top-band">
+        <div>
+          <p class="eyebrow">Workplace Weather</p>
+          <h1>Check the emotional forecast at work.</h1>
+          <p class="intro">Anonymous daily mood check-ins for employees. Turn workplace vibes into a weather report people actually understand.</p>
+        </div>
+        <div class="status-box">
+          <span>Prototype</span>
+          <strong>Local-only</strong>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <section class="panel checkin-panel" aria-label="Daily mood check-in">
+          <div class="section-heading">
+            <p class="eyebrow">Daily Check-In</p>
+            <h2>How did work feel today?</h2>
+          </div>
+
+          <form id="checkinForm">
+            <label class="field">
+              <span>Company</span>
+              <input id="companyInput" type="text" placeholder="Acme Corp" autocomplete="organization" required />
+            </label>
+
+            <div class="field">
+              <span>Mood</span>
+              <div class="mood-grid" role="radiogroup" aria-label="Mood">
+                <label class="mood-option">
+                  <input type="radio" name="mood" value="great" />
+                  <strong>Sunny</strong>
+                  <small>great</small>
+                </label>
+                <label class="mood-option">
+                  <input type="radio" name="mood" value="okay" checked />
+                  <strong>Mild</strong>
+                  <small>okay</small>
+                </label>
+                <label class="mood-option">
+                  <input type="radio" name="mood" value="stressed" />
+                  <strong>Cloudy</strong>
+                  <small>stressed</small>
+                </label>
+                <label class="mood-option">
+                  <input type="radio" name="mood" value="burned_out" />
+                  <strong>Storm</strong>
+                  <small>burned out</small>
+                </label>
+              </div>
+            </div>
+
+            <div class="field">
+              <span>Main reason</span>
+              <div class="reason-grid">
+                <label><input type="checkbox" value="meetings" /> Meetings</label>
+                <label><input type="checkbox" value="workload" /> Workload</label>
+                <label><input type="checkbox" value="manager" /> Manager</label>
+                <label><input type="checkbox" value="unclear priorities" /> Unclear priorities</label>
+                <label><input type="checkbox" value="commute" /> Commute</label>
+                <label><input type="checkbox" value="layoff anxiety" /> Layoff anxiety</label>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <label class="field">
+                <span>Check-in</span>
+                <select id="shiftInput">
+                  <option value="end">End of day</option>
+                  <option value="start">Start of day</option>
+                  <option value="lunch">Lunch break</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Comment</span>
+                <input id="commentInput" type="text" maxlength="90" placeholder="optional, stays local in prototype" />
+              </label>
+            </div>
+
+            <button class="primary-btn" type="submit">Submit anonymous check-in</button>
+          </form>
+
+          <div class="privacy-note">
+            <strong>Privacy stance</strong>
+            <span>Real product should only show company results after enough anonymous responses. This prototype uses local mock aggregation.</span>
+          </div>
+        </section>
+
+        <section class="panel result-panel" aria-label="Company mood weather">
+          <div class="weather-card" id="weatherCard">
+            <div class="weather-topline">
+              <div>
+                <p class="eyebrow">Today&apos;s Forecast</p>
+                <h2 id="companyName">Your workplace</h2>
+              </div>
+              <div class="weather-icon" id="weatherIcon">CLD</div>
+            </div>
+
+            <div class="weather-score">
+              <span id="weatherLabel">Cloudy</span>
+              <strong id="burnoutScore">42%</strong>
+            </div>
+            <p id="weatherSummary">Submit a check-in to generate a workplace weather report.</p>
+
+            <div class="metric-grid">
+              <div>
+                <span id="checkinCount">0</span>
+                <small>check-ins</small>
+              </div>
+              <div>
+                <span id="dreadIndex">0.0</span>
+                <small>dread index</small>
+              </div>
+              <div>
+                <span id="trendLabel">new</span>
+                <small>7-day trend</small>
+              </div>
+            </div>
+
+            <div class="reason-bar" id="reasonBar"></div>
+          </div>
+
+          <div class="share-actions">
+            <button id="downloadBtn" class="secondary-btn" type="button">Download share card</button>
+            <button id="copyBtn" class="ghost-btn" type="button">Copy caption</button>
+          </div>
+
+          <div class="history-panel">
+            <div class="section-heading compact">
+              <p class="eyebrow">Your Local Log</p>
+              <h2>Recent check-ins</h2>
+            </div>
+            <div id="historyList" class="history-list"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <canvas id="shareCanvas" width="1200" height="1600" hidden></canvas>
+    <script src="./app.js"></script>
+  </body>
+</html>
+
