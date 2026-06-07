@@ -140,6 +140,38 @@ form {
   font-weight: 850;
 }
 
+.company-suggestions {
+  display: grid;
+  gap: 8px;
+  margin-top: -8px;
+}
+
+.company-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  padding: 9px 11px;
+  background: #fbfcfd;
+  color: var(--ink);
+  text-align: left;
+}
+
+.company-suggestion strong {
+  display: block;
+}
+
+.company-suggestion small {
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.company-suggestion.add {
+  border-style: dashed;
+}
+
 input[type="text"],
 select {
   width: 100%;
@@ -429,4 +461,3 @@ button {
     display: grid;
   }
 }
-

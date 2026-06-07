@@ -29,9 +29,10 @@
 
           <form id="checkinForm">
             <label class="field">
-              <span>Company</span>
-              <input id="companyInput" type="text" placeholder="Acme Corp" autocomplete="organization" required />
+              <span>Find your workplace</span>
+              <input id="companyInput" type="text" placeholder="Search Google, Amazon, Delta..." autocomplete="off" required />
             </label>
+            <div id="companySuggestions" class="company-suggestions" aria-live="polite"></div>
 
             <div class="field">
               <span>Mood</span>

@@ -1,4 +1,39 @@
 const storageKey = "workplaceWeather:checkins";
+const customCompaniesKey = "workplaceWeather:customCompanies";
+
+const seedCompanies = [
+  { id: "google", name: "Google", aliases: ["Alphabet", "Google LLC", "Google Cloud"], industry: "Tech", status: "seeded" },
+  { id: "amazon", name: "Amazon", aliases: ["AWS", "Amazon Web Services"], industry: "Tech / Retail", status: "seeded" },
+  { id: "microsoft", name: "Microsoft", aliases: ["Microsoft Corporation"], industry: "Tech", status: "seeded" },
+  { id: "meta", name: "Meta", aliases: ["Facebook", "Instagram"], industry: "Tech", status: "seeded" },
+  { id: "apple", name: "Apple", aliases: ["Apple Inc."], industry: "Tech / Retail", status: "seeded" },
+  { id: "tesla", name: "Tesla", aliases: ["Tesla Motors"], industry: "Auto / Tech", status: "seeded" },
+  { id: "oracle", name: "Oracle", aliases: ["Oracle Corporation"], industry: "Enterprise Software", status: "seeded" },
+  { id: "salesforce", name: "Salesforce", aliases: ["Salesforce.com"], industry: "Enterprise Software", status: "seeded" },
+  { id: "nvidia", name: "Nvidia", aliases: ["NVIDIA"], industry: "Semiconductors", status: "seeded" },
+  { id: "intel", name: "Intel", aliases: ["Intel Corporation"], industry: "Semiconductors", status: "seeded" },
+  { id: "walmart", name: "Walmart", aliases: ["Walmart Inc."], industry: "Retail", status: "seeded" },
+  { id: "target", name: "Target", aliases: ["Target Corporation"], industry: "Retail", status: "seeded" },
+  { id: "costco", name: "Costco", aliases: ["Costco Wholesale"], industry: "Retail", status: "seeded" },
+  { id: "starbucks", name: "Starbucks", aliases: ["Starbucks Coffee"], industry: "Food / Retail", status: "seeded" },
+  { id: "home-depot", name: "Home Depot", aliases: ["The Home Depot"], industry: "Retail", status: "seeded" },
+  { id: "mcdonalds", name: "McDonald's", aliases: ["McDonalds"], industry: "Food Service", status: "seeded" },
+  { id: "ups", name: "UPS", aliases: ["United Parcel Service"], industry: "Logistics", status: "seeded" },
+  { id: "fedex", name: "FedEx", aliases: ["Federal Express"], industry: "Logistics", status: "seeded" },
+  { id: "delta", name: "Delta Air Lines", aliases: ["Delta", "Delta Airlines"], industry: "Airline", status: "seeded" },
+  { id: "united", name: "United Airlines", aliases: ["United"], industry: "Airline", status: "seeded" },
+  { id: "jpmorgan", name: "JPMorgan Chase", aliases: ["JP Morgan", "Chase"], industry: "Finance", status: "seeded" },
+  { id: "bank-of-america", name: "Bank of America", aliases: ["BofA"], industry: "Finance", status: "seeded" },
+  { id: "wells-fargo", name: "Wells Fargo", aliases: ["Wells"], industry: "Finance", status: "seeded" },
+  { id: "capital-one", name: "Capital One", aliases: ["CapitalOne"], industry: "Finance", status: "seeded" },
+  { id: "deloitte", name: "Deloitte", aliases: ["Deloitte Consulting"], industry: "Consulting", status: "seeded" },
+  { id: "accenture", name: "Accenture", aliases: ["Accenture Consulting"], industry: "Consulting", status: "seeded" },
+  { id: "pwc", name: "PwC", aliases: ["PricewaterhouseCoopers"], industry: "Consulting", status: "seeded" },
+  { id: "ey", name: "EY", aliases: ["Ernst & Young"], industry: "Consulting", status: "seeded" },
+  { id: "unitedhealth", name: "UnitedHealth Group", aliases: ["UnitedHealthcare", "Optum"], industry: "Healthcare", status: "seeded" },
+  { id: "cvs", name: "CVS Health", aliases: ["CVS", "Aetna"], industry: "Healthcare / Retail", status: "seeded" },
+  { id: "arrow-electronics", name: "Arrow Electronics", aliases: ["Arrow", "Arrow Electronics Inc."], industry: "Electronics / Distribution", status: "seeded" }
+];
 
 const moodConfig = {
   great: { label: "Sunny", icon: "SUN", className: "sunny", score: 8, line: "Clear skies, actual morale detected." },
@@ -10,6 +45,7 @@ const moodConfig = {
 const elements = {
   form: document.querySelector("#checkinForm"),
   company: document.querySelector("#companyInput"),
+  suggestions: document.querySelector("#companySuggestions"),
   shift: document.querySelector("#shiftInput"),
   card: document.querySelector("#weatherCard"),
   companyName: document.querySelector("#companyName"),
@@ -27,6 +63,8 @@ const elements = {
   canvas: document.querySelector("#shareCanvas")
 };
 
+let selectedCompany = null;
+
 function loadCheckins() {
   try {
     return JSON.parse(localStorage.getItem(storageKey) || "[]");
@@ -39,8 +77,93 @@ function saveCheckins(checkins) {
   localStorage.setItem(storageKey, JSON.stringify(checkins.slice(-50)));
 }
 
+function slugify(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function loadCustomCompanies() {
+  try {
+    return JSON.parse(localStorage.getItem(customCompaniesKey) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomCompany(company) {
+  const companies = loadCustomCompanies();
+  if (!companies.some(function sameCompany(item) { return item.id === company.id; })) {
+    companies.push(company);
+    localStorage.setItem(customCompaniesKey, JSON.stringify(companies.slice(-50)));
+  }
+}
+
+function allCompanies() {
+  return seedCompanies.concat(loadCustomCompanies());
+}
+
 function normalizeCompany(value) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function searchableText(company) {
+  return [company.name].concat(company.aliases || []).join(" ").toLowerCase();
+}
+
+function findCompanyByName(value) {
+  const normalized = normalizeCompany(value).toLowerCase();
+  return allCompanies().find(function exactCompany(company) {
+    return company.name.toLowerCase() === normalized || (company.aliases || []).some(function exactAlias(alias) {
+      return alias.toLowerCase() === normalized;
+    });
+  });
+}
+
+function matchingCompanies(value) {
+  const query = normalizeCompany(value).toLowerCase();
+  if (!query) return seedCompanies.slice(0, 6);
+  return allCompanies().filter(function companyMatches(company) {
+    return searchableText(company).includes(query);
+  }).slice(0, 6);
+}
+
+function selectCompany(company) {
+  selectedCompany = company;
+  elements.company.value = company.name;
+  elements.suggestions.innerHTML = "";
+  localStorage.setItem("workplaceWeather:lastCompany", company.name);
+  renderWeather(company.name);
+}
+
+function addWorkplace(name) {
+  const companyName = normalizeCompany(name);
+  if (!companyName) return null;
+  const existing = findCompanyByName(companyName);
+  if (existing) {
+    selectCompany(existing);
+    return existing;
+  }
+  const company = {
+    id: "user-added-" + slugify(companyName),
+    name: companyName,
+    aliases: [],
+    industry: "User added",
+    status: "user_added"
+  };
+  saveCustomCompany(company);
+  selectCompany(company);
+  return company;
+}
+
+function renderCompanySuggestions() {
+  const value = normalizeCompany(elements.company.value);
+  const matches = matchingCompanies(value);
+  const exact = value && findCompanyByName(value);
+  const addRow = value && !exact
+    ? "<button class=\"company-suggestion add\" type=\"button\" data-add=\"true\"><span><strong>Add \"" + escapeHtml(value) + "\"</strong><small>New workplace, pending normalization</small></span><small>user added</small></button>"
+    : "";
+  elements.suggestions.innerHTML = matches.map(function suggestion(company) {
+    return "<button class=\"company-suggestion\" type=\"button\" data-company-id=\"" + escapeHtml(company.id) + "\"><span><strong>" + escapeHtml(company.name) + "</strong><small>" + escapeHtml((company.aliases || []).slice(0, 2).join(", ") || company.industry) + "</small></span><small>" + escapeHtml(company.status) + "</small></button>";
+  }).join("") + addRow;
 }
 
 function selectedMood() {
@@ -164,10 +287,12 @@ function clearReasons() {
 
 function submitCheckin(event) {
   event.preventDefault();
-  const company = normalizeCompany(elements.company.value);
-  if (!company) return;
+  const companyRecord = selectedCompany || findCompanyByName(elements.company.value) || addWorkplace(elements.company.value);
+  if (!companyRecord) return;
+  const company = companyRecord.name;
   const checkins = loadCheckins();
   checkins.push({
+    companyId: companyRecord.id,
     company: company,
     mood: selectedMood(),
     reasons: selectedReasons(),
@@ -272,12 +397,28 @@ elements.download.addEventListener("click", downloadShareCard);
 elements.copy.addEventListener("click", copyCaption);
 elements.company.addEventListener("input", function renderTypedCompany() {
   const company = normalizeCompany(elements.company.value);
-  if (company) renderWeather(company);
+  selectedCompany = findCompanyByName(company) || null;
+  renderCompanySuggestions();
+  if (company) renderWeather(selectedCompany ? selectedCompany.name : company);
 });
 elements.company.addEventListener("change", function saveCompany() {
   localStorage.setItem("workplaceWeather:lastCompany", normalizeCompany(elements.company.value));
 });
+elements.suggestions.addEventListener("click", function handleSuggestion(event) {
+  const button = event.target.closest("button");
+  if (!button) return;
+  if (button.dataset.add) {
+    addWorkplace(elements.company.value);
+    return;
+  }
+  const company = allCompanies().find(function byId(item) {
+    return item.id === button.dataset.companyId;
+  });
+  if (company) selectCompany(company);
+});
 
-elements.company.value = localStorage.getItem("workplaceWeather:lastCompany") || "";
-renderWeather(elements.company.value || "Acme Corp");
+elements.company.value = localStorage.getItem("workplaceWeather:lastCompany") || "Acme Corp";
+selectedCompany = findCompanyByName(elements.company.value) || null;
+renderCompanySuggestions();
+renderWeather(selectedCompany ? selectedCompany.name : elements.company.value);
 renderHistory();
