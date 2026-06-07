@@ -11,7 +11,6 @@ const elements = {
   form: document.querySelector("#checkinForm"),
   company: document.querySelector("#companyInput"),
   shift: document.querySelector("#shiftInput"),
-  comment: document.querySelector("#commentInput"),
   card: document.querySelector("#weatherCard"),
   companyName: document.querySelector("#companyName"),
   weatherIcon: document.querySelector("#weatherIcon"),
@@ -173,12 +172,10 @@ function submitCheckin(event) {
     mood: selectedMood(),
     reasons: selectedReasons(),
     shift: elements.shift.value,
-    comment: elements.comment.value.trim(),
     createdAt: new Date().toISOString()
   });
   saveCheckins(checkins);
   localStorage.setItem("workplaceWeather:lastCompany", company);
-  elements.comment.value = "";
   clearReasons();
   renderWeather(company);
   renderHistory();
@@ -284,4 +281,3 @@ elements.company.addEventListener("change", function saveCompany() {
 elements.company.value = localStorage.getItem("workplaceWeather:lastCompany") || "";
 renderWeather(elements.company.value || "Acme Corp");
 renderHistory();
-
