@@ -25,6 +25,7 @@ This is not positioned as an HR surveillance tool. It is an employee-first emoti
 - No free-text comments. The product should collect structured mood signals only.
 - Public company weather unlocks only after an aggregate response threshold.
 - Historical modules have a higher threshold, and each day in the past 7 days must meet its own daily threshold.
+- Share cards are user-triggered, not automatic. Before public weather unlocks, cards stay anonymous and omit the company name.
 
 ## Core Safety Rules
 
@@ -36,6 +37,7 @@ This is not positioned as an HR surveillance tool. It is an employee-first emoti
 - Do not build a comment section.
 - Do not collect or display free-text workplace complaints.
 - Sell or display only aggregate trends, never individual-level data.
+- Do not allow company-named share cards until the public weather threshold is met.
 
 ## Run Locally
 

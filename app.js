@@ -67,6 +67,7 @@ const elements = {
   historyGrid: document.querySelector("#forecastGrid"),
   trendChart: document.querySelector("#trendChart"),
   pressureSystems: document.querySelector("#pressureSystems"),
+  shareNote: document.querySelector("#shareNote"),
   history: document.querySelector("#historyList"),
   download: document.querySelector("#downloadBtn"),
   copy: document.querySelector("#copyBtn"),
@@ -288,9 +289,28 @@ function trendFor(average) {
   return "critical";
 }
 
+function shareModeFor(result) {
+  if (result.count >= historyModuleThreshold) return "weekly";
+  if (result.count >= publicWeatherThreshold) return "public";
+  return "personal";
+}
+
+function shareLabelFor(mode) {
+  if (mode === "weekly") return "Weekly public weather card";
+  if (mode === "public") return "Public company weather card";
+  return "Anonymous personal weather card";
+}
+
 function captionFor(result) {
   const config = moodConfig[result.mood];
-  return "Today\'s workplace weather at " + result.company + ": " + config.label.toLowerCase() + " with a " + Math.round(result.average) + "% chance of burnout.";
+  const mode = shareModeFor(result);
+  if (mode === "weekly") {
+    return result.company + " workplace weather this week: " + trendFor(result.average) + " with thresholded anonymous signals only.";
+  }
+  if (mode === "public") {
+    return "Today\'s workplace weather at " + result.company + ": " + config.label.toLowerCase() + " with " + result.count + "+ anonymous signals.";
+  }
+  return "I checked in to Workplace Weather today. My workplace feels " + config.label.toLowerCase() + ". Anonymous, no comments, no company name.";
 }
 
 function renderWeather(company) {
@@ -313,7 +333,21 @@ function renderWeather(company) {
   renderUnlock(result);
   renderSignalHistory(result);
   renderTrend(result);
+  renderShareNote(result);
   return result;
+}
+
+function renderShareNote(result) {
+  const mode = shareModeFor(result);
+  if (mode === "weekly") {
+    elements.shareNote.textContent = "Share card: weekly company card is available because public weather and historical trend thresholds are met.";
+    return;
+  }
+  if (mode === "public") {
+    elements.shareNote.textContent = "Share card: public company card is available. Historical/weekly cards stay locked until trend thresholds are met.";
+    return;
+  }
+  elements.shareNote.textContent = "Share card: anonymous personal card only. It will not include the company name until public weather unlocks.";
 }
 
 function renderUnlock(result) {
@@ -455,6 +489,9 @@ function drawShareCard(result) {
   const canvas = elements.canvas;
   const ctx = canvas.getContext("2d");
   const config = moodConfig[result.mood];
+  const mode = shareModeFor(result);
+  const isPersonal = mode === "personal";
+  const isWeekly = mode === "weekly";
   const palette = {
     sunny: ["#fff1bd", "#f2b84b", "#171717"],
     mild: ["#e6f6ec", "#62a87c", "#171717"],
@@ -471,29 +508,40 @@ function drawShareCard(result) {
   ctx.font = "900 54px system-ui, -apple-system, Segoe UI, sans-serif";
   ctx.fillText("WORKPLACE WEATHER", 90, 140);
 
+  ctx.font = "900 34px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText(shareLabelFor(mode).toUpperCase(), 90, 198);
+
   ctx.font = "900 102px system-ui, -apple-system, Segoe UI, sans-serif";
-  wrapText(ctx, result.company, 90, 300, 980, 112);
+  wrapText(ctx, isPersonal ? "My workplace" : result.company, 90, 330, 980, 112);
 
   ctx.font = "950 110px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText(config.icon, 90, 560);
+  ctx.fillText(config.icon, 90, 590);
 
   ctx.font = "950 110px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText(config.label, 90, 760);
+  ctx.fillText(isWeekly ? trendFor(result.average).toUpperCase() : config.label, 90, 790);
 
   ctx.font = "950 154px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText(Math.round(result.average) + "%", 90, 980);
+  ctx.fillText(isPersonal ? "ANON" : Math.round(result.average) + "%", 90, 1010);
 
   ctx.font = "800 48px system-ui, -apple-system, Segoe UI, sans-serif";
-  wrapText(ctx, "chance of burnout · " + result.count + " anonymous signals", 90, 1080, 980, 58);
+  const signalLine = isPersonal
+    ? "personal check-in · company hidden until public threshold"
+    : "chance of burnout · " + result.count + " anonymous signals";
+  wrapText(ctx, signalLine, 90, 1110, 980, 58);
 
   ctx.font = "800 42px system-ui, -apple-system, Segoe UI, sans-serif";
   const reasons = result.reasons.map(function reasonName(entry) {
     return entry[0];
   }).join(" · ") || "new signal";
-  wrapText(ctx, "Top pressure: " + reasons, 90, 1250, 980, 54);
+  const detailLine = isPersonal
+    ? "No names. No comments. No company name."
+    : isWeekly
+      ? "Trend uses thresholded days only. Low-sample days are hidden."
+      : "Top pressure: " + reasons;
+  wrapText(ctx, detailLine, 90, 1280, 980, 54);
 
   ctx.font = "900 38px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("self-reported sentiment · workplaceweather.local", 90, 1480);
+  ctx.fillText("self-reported sentiment · aggregate only", 90, 1480);
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
@@ -515,9 +563,11 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
 function downloadShareCard() {
   const company = normalizeCompany(elements.company.value) || elements.companyName.textContent;
   const result = renderWeather(company);
+  const mode = shareModeFor(result);
   drawShareCard(result);
   const link = document.createElement("a");
-  link.download = company.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-workplace-weather.png";
+  const namePrefix = mode === "personal" ? "anonymous" : company.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  link.download = namePrefix + "-" + mode + "-workplace-weather.png";
   link.href = elements.canvas.toDataURL("image/png");
   link.click();
 }
